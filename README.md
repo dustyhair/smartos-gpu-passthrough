@@ -1,42 +1,45 @@
-# SmartOS GPU Passthrough Notes
+# SmartOS GPU Passthrough
 
-This repository records the working SmartOS GPU passthrough baseline, the
-branches needed to reproduce it, and the operational details that were learned
-while making NVIDIA TU102 passthrough work under `vmadm`.
+This repository documents the branch set and setup steps used to experiment
+with NVIDIA GPU passthrough on SmartOS bhyve.
 
-The current known-good path is **SmartOS bhyve through vmadm**, not the older
-standalone launcher path. The old launcher remains useful as a historical A/B
-baseline, but the active goal is to keep passthrough reproducible through normal
-SmartOS VM management.
+The current working direction is **bhyve GPU passthrough through `vmadm`**. The
+goal is to make it easy to clone the right trees, check out the right branches,
+build SmartOS, and try the different passthrough branches without reconstructing
+the history from chat logs.
 
-## Current Status
+## What Works
 
-- Windows 11 installs and boots through `vmadm`.
-- The VM uses flat PCI topology with GPU display, audio, xHCI, and auxiliary
-  functions attached as `ppt0` through `ppt3`.
-- TPM 2.0 is provided by `swtpm`.
-- The NVIDIA GPU ROM is attached to `ppt0`; `rom_exec` is disabled.
-- The VM uses 8 GiB RAM and 4 vCPUs.
-- `autoboot` is disabled while testing.
+- Windows 11 can install and boot with GPU passthrough through `vmadm`.
+- The tested GPU is an NVIDIA TU102 device, specifically an RTX 2080 Ti class
+  card.
+- The working layout uses flat PCI topology.
+- The tested VM passes through all GPU package functions:
+  - display function
+  - HDMI/DP audio
+  - USB xHCI controller
+  - UCSI / auxiliary function
+- Windows 11 uses TPM 2.0 through `swtpm`.
+- The GPU ROM is supplied to the display function, with ROM execution disabled
+  after firmware use.
 
-## Documentation Map
+## Start Here
 
-- [Branch matrix](docs/branches.md)
-- [Build and deploy workflow](docs/build-deploy.md)
-- [Known-good vmadm Windows 11 configuration](docs/vmadm-windows.md)
-- [TPM runtime and swtpm/libtpms notes](docs/tpm-runtime.md)
-- [Known-good test state](docs/known-good.md)
-- [Open issues and risks](docs/open-issues.md)
+1. Read the [branch matrix](docs/branches.md).
+2. Follow the [setup guide](docs/setup.md).
+3. Build with the [build notes](docs/build.md).
+4. Create a test VM using [vmadm Windows notes](docs/vmadm-windows.md).
+5. Use [known-good settings](docs/known-good.md) as the first target.
+6. Review [open issues](docs/open-issues.md) before changing reset, topology, or
+   interrupt-remapping behavior.
 
-## Non-Negotiable Test Rules
+## Repository Layout
 
-- Do not install or modify `boot-TESTING` unless there is explicit approval for
-  that specific action.
-- Treat a working deployed image and a working source commit as different until
-  a clean rebuild and retest proves they match.
-- Record meaningful builds, deploys, and runtime tests in
-  `/build/RUNNING_TESTS.md`.
-- Use at least 4 GiB RAM for bhyve passthrough tests. The working Windows
-  baseline uses 8 GiB.
-- Keep passthrough topology flat unless a test explicitly says otherwise.
+- `docs/branches.md`: branch and commit map.
+- `docs/setup.md`: how to clone the trees and select branches.
+- `docs/build.md`: SmartOS/illumos build notes.
+- `docs/vmadm-windows.md`: example VM configuration for Windows passthrough.
+- `docs/tpm-runtime.md`: `swtpm` and `libtpms` notes.
+- `docs/known-good.md`: baseline settings known to boot.
+- `docs/open-issues.md`: known limitations and areas still under test.
 

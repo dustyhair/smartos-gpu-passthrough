@@ -1,43 +1,45 @@
-# Open Issues and Risks
+# Open Issues
 
-## Branches Not Fully Published Yet
+## Reset Reliability
 
-At the time this repository was initialized:
+GPU reset behavior is still an area for experimentation.
 
-- `/build/smartos-live` was ahead of origin by 2 commits.
-- `/build/smartos-live/projects/illumos` was ahead of origin by 4 commits.
+- Function-level reset has worked for the display function in some tests.
+- Other functions in the GPU package may not FLR cleanly.
+- Bus/device reset work exists in the branch history, but it should be tested
+  carefully before relying on it for repeated VM switching.
 
-Push both branches before treating the GitHub branch matrix as reproducible from
-a fresh clone.
+## Interrupt Remapping
 
-## Residual Runtime Questions
+Interrupt-remapping behavior was difficult to stabilize. Avoid large unrelated
+changes in the IOMMU, APIC, rootnex, or ppt interrupt paths while testing reset
+behavior.
 
-- The Windows 11 setup window logged an `ahci` watchdog and zone init restart,
-  but no new host panic was observed.
-- `ppt0` FLR has worked, while `ppt1` through `ppt3` have returned `EIO`.
-  Bus/device reset work remains future testing.
-- GPU reset reliability is not yet proven enough to skip host reboots before
-  high-signal passthrough tests.
-- The old launcher path is useful for A/B testing but should not be the primary
-  operational path now that vmadm can boot the VM.
+Useful areas to inspect:
 
-## Firmware and Install Friction
+```text
+usr/src/uts/i86pc/io/immu_intrmap.c
+usr/src/uts/i86pc/io/immu_qinv.c
+usr/src/uts/i86pc/io/rootnex.c
+usr/src/uts/intel/io/vmm/intel/vtd.c
+usr/src/uts/intel/io/vmm/io/ppt.c
+```
 
-- Windows install media can stop at the DVD "press any key" prompt. After the
-  first install stage, keep the disk bootable and installer ISO non-bootable.
-- A no-prompt Windows 11 ISO has not been built in this baseline.
-- Keep working UEFI VARS files backed up before making firmware or boot-order
-  changes.
+## xHCI Passthrough
 
-## TPM Runtime Cleanup
+The GPU package xHCI controller is important for keyboard and mouse passthrough
+in the Windows test setup. The current branch includes teardown serialization
+for xHCI endpoint timeout handling, but this path should be watched when
+switching guests repeatedly.
 
-- `swtpm` currently relies on locally staged SmartOS builds.
-- Confirm the runtime library path and packaging strategy before calling TPM
-  support production-ready.
+## Windows Install Media
 
-## Logging Cleanup
+Windows install media may stop at a "press any key to boot from DVD" prompt.
+After the first install stage, make the disk bootable and the ISO non-bootable.
 
-Most TU102-specific diagnostics were removed or quieted, but new debugging work
-should avoid adding permanent device-specific log spam. If instrumentation is
-needed, make it gated, short-lived, or clearly marked for removal.
+## TPM Packaging
+
+The TPM path uses SmartOS-built `swtpm` and `libtpms`. The source branches build,
+but packaging and runtime library path handling should be cleaned up before
+treating this as a polished SmartOS feature.
 

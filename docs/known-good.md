@@ -1,52 +1,49 @@
-# Known-Good Test State
+# Known-Good Baseline
 
-This is the baseline to preserve before more cleanup or reset experiments.
+Use this as the first target when bringing up a new test system.
 
-## Latest Successful Checkpoint
-
-```text
-2026-05-08T12:19:38Z
-Windows 11 vmadm install completed
-```
-
-Source state:
+## Source State
 
 ```text
-smartos-live=vmadm-bhyve-passthru-20260505@95a08e146873894e029f620fe913e60b0f8fa7a9
-illumos=vmadm-bhyve-passthru-20260505@59a39216f4a9edc31de71f30e6495ae30686463f
-launcher_repo=670ad873f103
-launcher=vmadm
+smartos-live branch: vmadm-bhyve-passthru-20260505
+smartos-live commit: 95a08e146873894e029f620fe913e60b0f8fa7a9
+
+illumos branch: vmadm-bhyve-passthru-20260505
+illumos commit: 59a39216f4a9edc31de71f30e6495ae30686463f
 ```
 
-Result:
+## Guest Shape
+
+- Windows 11.
+- 8 GiB RAM.
+- 4 vCPUs.
+- q35 host bridge.
+- flat passthrough topology.
+- virtio1 enabled.
+- TPM 2.0 through `swtpm`.
+- GPU ROM supplied to the display function.
+- installer ISO and virtio driver ISO attached as non-boot devices after
+  installation.
+
+## Passthrough Device Set
+
+The tested GPU package was passed as four functions:
+
+| Function | Example device | Notes |
+| --- | --- | --- |
+| display | `ppt0` | ROM attached, ROM execution disabled after firmware use |
+| audio | `ppt1` | same GPU package |
+| xHCI | `ppt2` | used for USB keyboard/mouse path |
+| UCSI / auxiliary | `ppt3` | same GPU package |
+
+## Windows 11 Setup
+
+If Windows setup cannot find a network driver, bypass network during OOBE:
 
 ```text
-PASS/RUNNING
+Shift+F10
+OOBE\BYPASSNRO
 ```
 
-The user reported Windows 11 setup completed. `vmadm` showed the VM running
-with `autoboot=false`. The Windows 10 VM was stopped.
-
-## Working VM Summary
-
-- `win11vm`
-- UUID `67401f9c-1b72-4630-94eb-e7e677ce813b`
-- 8 GiB RAM
-- 4 vCPUs
-- q35 host bridge
-- flat `ppt0` through `ppt3`
-- ROM attached to `ppt0`
-- TPM 2.0 through `swtpm`
-- `virtio1=true`
-- Windows and virtio ISOs attached but non-boot
-- disk boot enabled
-
-## Preserve These Conditions
-
-- Keep the VM on flat topology while validating changes.
-- Keep `autoboot=false` unless explicitly testing boot policy.
-- Keep a copy of the working UEFI VARS file before firmware or setup changes.
-- Reboot the host before tests that need a clean GPU state until reset behavior
-  is proven reliable.
-- Record every meaningful A/B test in `/build/RUNNING_TESTS.md`.
+Install virtio and NVIDIA drivers after Windows reaches the desktop.
 

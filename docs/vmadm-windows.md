@@ -1,11 +1,12 @@
-# vmadm Windows Passthrough Baseline
+# vmadm Windows Passthrough Example
 
-The current known-good VM is Windows 11 managed by `vmadm`.
+This is an example shape for a Windows 11 passthrough VM. UUIDs, disk names,
+device names, and ROM paths should be adjusted for the local machine.
 
 ## VM Identity
 
 - Alias: `win11vm`
-- UUID: `67401f9c-1b72-4630-94eb-e7e677ce813b`
+- UUID: local VM UUID
 - RAM: `8192` MiB
 - vCPUs: `4`
 - `autoboot`: `false`
@@ -15,20 +16,13 @@ The current known-good VM is Windows 11 managed by `vmadm`.
 ## Firmware
 
 ```text
-/zones/build/fw/BHYVE_UEFI_CODE.fd
-/zones/build/BHYVE_VARS_WIN11VM_VMADM_WORK.fd
-```
-
-Configured as:
-
-```text
-bootrom=/zones/build/fw/BHYVE_UEFI_CODE.fd,/zones/build/BHYVE_VARS_WIN11VM_VMADM_WORK.fd
+bootrom=/path/to/BHYVE_UEFI_CODE.fd,/path/to/BHYVE_VARS_WIN11.fd
 ```
 
 Extra bhyve options:
 
 ```text
--w -P -a -Y -o lpc.fwcfg=qemu -f name=opt/gpu-diag,file=/zones/build/fwcfg-gpu-diag.txt
+-w -P -a -Y -o lpc.fwcfg=qemu -f name=opt/gpu-diag,file=/path/to/fwcfg-gpu-diag.txt
 ```
 
 ## Storage
@@ -48,9 +42,8 @@ Properties:
 
 Attached ISOs after installation:
 
-- `/zones/build/Win11_25H2_English_x64_v2.iso`, `boot=false`, `ahci-cd`,
-  PCI slot `0:2:0`
-- `/zones/build/virtio-win.iso`, `boot=false`, `ahci-cd`, PCI slot `0:3:0`
+- Windows 11 installer ISO, `boot=false`, `ahci-cd`, PCI slot `0:2:0`
+- virtio driver ISO, `boot=false`, `ahci-cd`, PCI slot `0:3:0`
 
 ## Passthrough Devices
 
@@ -66,7 +59,7 @@ Flat topology device layout:
 GPU ROM:
 
 ```text
-/zones/build/MSI.RTX2080Ti.1e07.raw.rom
+/path/to/gpu.rom
 ```
 
 ## TPM
@@ -74,7 +67,7 @@ GPU ROM:
 TPM is required for Windows 11 and is provided by `swtpm`:
 
 ```text
-bhyve_tpm=swtpm,/zones/build/tpm/67401f9c-1b72-4630-94eb-e7e677ce813b/swtpm.sock,version=2.0
+bhyve_tpm=swtpm,/path/to/tpm/<vm-uuid>/swtpm.sock,version=2.0
 ```
 
 ## Network
@@ -93,10 +86,6 @@ After reboot, continue setup without network and install drivers later.
 
 ## Operational Notes
 
-- Use JSON on stdin for `vmadm update`; avoid passing large JSON as a shell
-  argument.
-- Confirm `autoboot=false` after edits.
-- Do not leave keyboard injectors or boot automation loops running after use.
-- After first-stage Windows install, set the disk as bootable and the installer
-  ISO as non-bootable to avoid the DVD "press any key" path.
-
+- Keep `autoboot=false` while experimenting.
+- After first-stage Windows install, set the disk as bootable and set the
+  installer ISO as non-bootable to avoid the DVD "press any key" path.

@@ -1,59 +1,59 @@
 # Branch Matrix
 
-This is the branch set used for the current working vmadm GPU passthrough
-baseline.
+These branches are the current known-good set for trying GPU passthrough with
+`vmadm`.
 
-| Component | Remote | Branch | Commit | Notes |
-| --- | --- | --- | --- | --- |
-| smartos-live | `git@github.com:dustyhair/smartos-live.git` | `vmadm-bhyve-passthru-20260505` | `95a08e146873894e029f620fe913e60b0f8fa7a9` | vmadm passthrough, TPM, virtio1, quoting fixes |
-| illumos-joyent | `git@github.com:dustyhair/illumos-joyent.git` | `vmadm-bhyve-passthru-20260505` | `59a39216f4a9edc31de71f30e6495ae30686463f` | bhyve, ppt, xHCI, ACPI, immu and poll fixes |
-| swtpm | `git@github.com:dustyhair/swtpm.git` | `smartos-build-support-20260507` | `08ee6b13a7aaab55c1fc4c68bd1b15d7e1b693f5` | SmartOS build support for TPM runtime |
-| libtpms | `git@github.com:dustyhair/libtpms.git` | `smartos-build-support-20260507` | `9ddc2013b383f3c2e43fc910f4134c2ab069b8f4` | SmartOS build support for libtpms |
-| launcher tracking | local `/build/launcher-tracking` | current local branch | `670ad873f103` | Historical standalone-launcher baseline |
+| Component | Repository | Branch | Commit |
+| --- | --- | --- | --- |
+| smartos-live | `git@github.com:dustyhair/smartos-live.git` | `vmadm-bhyve-passthru-20260505` | `95a08e146873894e029f620fe913e60b0f8fa7a9` |
+| illumos-joyent | `git@github.com:dustyhair/illumos-joyent.git` | `vmadm-bhyve-passthru-20260505` | `59a39216f4a9edc31de71f30e6495ae30686463f` |
+| swtpm | `git@github.com:dustyhair/swtpm.git` | `smartos-build-support-20260507` | `08ee6b13a7aaab55c1fc4c68bd1b15d7e1b693f5` |
+| libtpms | `git@github.com:dustyhair/libtpms.git` | `smartos-build-support-20260507` | `9ddc2013b383f3c2e43fc910f4134c2ab069b8f4` |
 
-## smartos-live Work
+## Branch Purpose
 
-Recent relevant commits:
+`smartos-live: vmadm-bhyve-passthru-20260505`
 
-- `95a08e14 vmadm: quote device matches in zonecfg updates`
-- `0153d453 vmadm: expose bhyve TPM option`
-- `c2fe1a9a vmadm: expose bhyve virtio1 option`
-- `941c3b0f bhyve vmadm: keep proc_fork privilege`
-- `3508e968 vmadm: expose passthrough MSI control`
-- `43017b3c vmadm: allow pci passthru device removal`
-- `03675756 vmadm: allow bhyve lofs filesystems`
-- `80d39089 vmadm: separate bhyve ppt device path`
+Adds the `vmadm` plumbing needed to describe passthrough VMs:
 
-Current local state when this document was written:
+- GPU ROM support for bhyve passthrough devices.
+- Per-device passthrough path handling.
+- passthrough device removal.
+- passthrough MSI control.
+- `bhyve_virtio1`.
+- `bhyve_tpm`.
+- quoting fixes for zonecfg device matches.
 
-- `/build/smartos-live` is ahead of origin by 2 commits.
-- Untracked entries exist and should not be accidentally committed:
-  `.vscode/`, `ill`.
+`illumos-joyent: vmadm-bhyve-passthru-20260505`
 
-## illumos Work
+Carries the kernel, bhyve, and bhyve-brand work:
 
-Recent relevant commits:
+- bhyve passthrough ROM handling.
+- ppt assignment, teardown, reset, and MSI support.
+- interrupt-remapping fixes for passthrough.
+- Intel VT-d / IOMMU behavior needed by the passthrough path.
+- ACPI generation fixes for passthrough guests.
+- TPM LPC/CRB support for Windows 11.
+- xHCI timeout teardown fixes.
+- reduced TU102-specific diagnostic logging.
 
-- `59a39216f4 xhci: serialize timeout callback teardown`
-- `d943bc6f1c bhyve: tolerate TPM CRB cancel writes`
-- `9cf17a83c7 bhyve brand: pass TPM LPC config`
-- `92cbccd1ee bhyve: log ACPI power button shutdown path`
-- `3290d948b1 immu: quiet TU102-specific qinv diagnostics`
-- `2a07f15d0b poll: tolerate stale pollcache bitmap entries`
-- `d96c9cc35a bhyve brand: allow ACPI compiler fork`
-- `027c9ac6fd bhyve: use explicit null device for iasl output`
-- `d088a7b797 bhyve: run iasl without requiring a shell`
-- `b5084fe8e0 bhyve brand: enable ACPI for passthru guests`
+`swtpm` and `libtpms`
 
-Current local state when this document was written:
+Carry SmartOS portability fixes needed to build and run a TPM 2.0 provider for
+Windows 11.
 
-- `/build/smartos-live/projects/illumos` is ahead of origin by 4 commits.
-- Untracked generated files exist under `usr/src/cmd/allocate/` and should not
-  be accidentally committed.
+## Older Experiment Branches
 
-## Push State Warning
+These branches may be useful when bisecting behavior or comparing earlier
+approaches:
 
-The documentation records the local working commits. If another machine needs
-to reproduce this exactly from GitHub, push the smartos-live and illumos
-branches first and verify the remote commit IDs match this file.
+| Branch | Repository | Use |
+| --- | --- | --- |
+| `gpu-passthrough-minimal` | illumos-joyent | earlier minimal passthrough baseline |
+| `gpu-passthrough-immu` | illumos-joyent | interrupt-remapping / IOMMU work |
+| `gpu-passthrough-late-runtime` | illumos-joyent | late runtime debugging |
+| `ppt-vfio-lifecycle` | illumos-joyent | ppt lifecycle experiments |
+| `ppt-lifecycle-refactor` | illumos-joyent | lifecycle refactor work |
+
+For normal testing, start with `vmadm-bhyve-passthru-20260505`.
 

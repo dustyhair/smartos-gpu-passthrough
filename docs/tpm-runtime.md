@@ -1,6 +1,6 @@
 # TPM Runtime
 
-Windows 11 requires TPM 2.0. The working SmartOS path uses `swtpm` with
+Windows 11 requires TPM 2.0. The tested SmartOS path uses `swtpm` with
 `libtpms`.
 
 ## Source Branches
@@ -10,7 +10,7 @@ Windows 11 requires TPM 2.0. The working SmartOS path uses `swtpm` with
 | swtpm | `git@github.com:dustyhair/swtpm.git` | `smartos-build-support-20260507` | `08ee6b13a7aaab55c1fc4c68bd1b15d7e1b693f5` |
 | libtpms | `git@github.com:dustyhair/libtpms.git` | `smartos-build-support-20260507` | `9ddc2013b383f3c2e43fc910f4134c2ab069b8f4` |
 
-## Why Forks Were Needed
+## Why SmartOS Branches Were Needed
 
 The upstream projects needed SmartOS portability fixes to build cleanly in this
 environment. The local branches add:
@@ -27,17 +27,11 @@ environment. The local branches add:
 The vmadm field is:
 
 ```text
-bhyve_tpm=swtpm,/zones/build/tpm/<vm-uuid>/swtpm.sock,version=2.0
+bhyve_tpm=swtpm,/path/to/tpm/<vm-uuid>/swtpm.sock,version=2.0
 ```
 
-For the current Windows 11 VM:
-
-```text
-bhyve_tpm=swtpm,/zones/build/tpm/67401f9c-1b72-4630-94eb-e7e677ce813b/swtpm.sock,version=2.0
-```
-
-The current runtime uses staged libraries and may require `LD_LIBRARY_PATH`
-matching the staged `libtpms`/`swtpm` install location.
+If you install into a private prefix, the runtime may need `LD_LIBRARY_PATH` or
+an equivalent rpath/runtime library configuration that can find `libtpms`.
 
 ## bhyve/SmartOS Support
 
@@ -51,4 +45,3 @@ Relevant illumos commits:
 
 - `9cf17a83c7 bhyve brand: pass TPM LPC config`
 - `d943bc6f1c bhyve: tolerate TPM CRB cancel writes`
-
