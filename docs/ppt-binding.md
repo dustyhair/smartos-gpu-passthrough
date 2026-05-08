@@ -29,17 +29,115 @@ the example blindly.
 
 ## Finding Device IDs
 
-Use the host's PCI tooling to identify the GPU functions. Useful commands vary
-by image, but these are the usual places to start:
+Identify the GPU while it is still attached to its normal host drivers, then
+bind those functions to `ppt`, reboot, and use `pptadm` to map `/dev/pptN`
+devices back to the physical functions.
+
+## Before Binding: Find the GPU Functions
+
+Use the host's PCI tooling before the device is reserved by `ppt`:
 
 ```bash
 prtconf -dD
 prtconf -v
-pcitool -lv
 ```
 
-Look for the NVIDIA functions and record the vendor ID and device ID. NVIDIA's
-vendor ID is usually `10de`.
+Look for a group of NVIDIA functions on the same PCI package. NVIDIA's vendor
+ID is usually `10de`. A TU102 / RTX 2080 Ti style card commonly has four
+functions:
+
+| Function | Class | What to look for |
+| --- | --- | --- |
+| display | VGA / 3D / display controller | NVIDIA display function |
+| audio | HD audio controller | NVIDIA HDMI/DP audio |
+| xHCI | USB controller | NVIDIA USB 3.x / xHCI |
+| UCSI / aux | serial bus / USB-C related | NVIDIA UCSI / auxiliary function |
+
+The functions usually share the same PCI slot and differ only by function
+number, for example:
+
+```text
+07:00.0  display
+07:00.1  audio
+07:00.2  xHCI
+07:00.3  UCSI / auxiliary
+```
+
+Record the vendor/device IDs for each function. Convert each pair into a
+`ppt_matches` line:
+
+```text
+vendor=10de device=1e07 -> pci10de,1e07
+vendor=10de device=10f7 -> pci10de,10f7
+vendor=10de device=1ad6 -> pci10de,1ad6
+vendor=10de device=1ad7 -> pci10de,1ad7
+```
+
+The exact IDs vary by card, board vendor, and generation. Do not copy these
+unless they match your hardware.
+
+If the host has more than one NVIDIA device, prefer matching by the exact
+physical path if you only want one card reserved. `pptadm(8)` supports matches
+by PCI ID or physical path; PCI ID matches reserve every matching device.
+
+## After Binding: Map ppt Devices
+
+After `ppt_matches` is installed and the host has rebooted, use:
+
+```bash
+pptadm list -a -o all
+pptadm list -j -a
+```
+
+Useful `pptadm` fields:
+
+| Field | Use |
+| --- | --- |
+| `dev` | `/dev/pptN` path to use in bhyve/vmadm. |
+| `path` | Physical `/devices` path. Use this to identify slot/function. |
+| `vendor` / `vendor-id` | PCI vendor ID. |
+| `device` / `device-id` | PCI device ID. |
+| `subvendor` / `subsystem-vendor-id` | Board vendor ID. |
+| `subdevice` / `subsystem-id` | Board-specific subsystem ID. |
+| `label` | Human-readable PCI database label. |
+
+Build a simple map before creating the VM:
+
+```text
+/dev/ppt0 -> display -> guest 0:8:0
+/dev/ppt1 -> audio   -> guest 0:8:1
+/dev/ppt2 -> xHCI    -> guest 0:8:2
+/dev/ppt3 -> UCSI    -> guest 0:8:3
+```
+
+Do not assume the `pptN` order. Confirm it with `pptadm list -j -a` after every
+hardware change or binding change.
+
+## Cross-Checking Guest Slots
+
+The known-good flat topology keeps the GPU package as one multifunction guest
+device:
+
+```text
+0:8:0  display
+0:8:1  audio
+0:8:2  xHCI
+0:8:3  UCSI / auxiliary
+```
+
+Use that map in `vmadm`:
+
+```json
+{
+  "path": "/dev/ppt0",
+  "pptdev": "ppt0",
+  "pci_slot": "0:8:0",
+  "rom": "/path/to/gpu.rom",
+  "rom_exec": false
+}
+```
+
+The other functions use the same slot with function numbers `1`, `2`, and `3`.
 
 ## Installing the Binding
 
