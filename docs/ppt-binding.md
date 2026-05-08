@@ -33,6 +33,21 @@ Identify the GPU while it is still attached to its normal host drivers, then
 bind those functions to `ppt`, reboot, and use `pptadm` to map `/dev/pptN`
 devices back to the physical functions.
 
+The source of truth is the host device tree:
+
+| Question | Command | What it proves |
+| --- | --- | --- |
+| What PCI vendor/device IDs exist? | `prtconf -d` | Shows PCI IDs such as `pci10de,1e07`. |
+| What driver owns the device now? | `prtconf -D` | Shows whether the function is still on a normal host driver or already on `ppt`. |
+| What exact device-tree path is this function? | `prtconf -v` | Shows the physical `/devices` tree and properties for the node. |
+| Which `/dev/pptN` did it become after binding? | `pptadm list -a -o all` or `pptadm list -j -a` | Maps `/dev/pptN` back to physical path and IDs. |
+
+The goal is to prove this chain:
+
+```text
+physical GPU slot/function -> PCI vendor/device ID -> ppt_matches entry -> same physical path under pptadm -> /dev/pptN -> guest slot
+```
+
 ## Before Binding: Find the GPU Functions
 
 Use the host's PCI tooling before the device is reserved by `ppt`:
@@ -42,9 +57,10 @@ prtconf -dD
 prtconf -v
 ```
 
-Look for a group of NVIDIA functions on the same PCI package. NVIDIA's vendor
-ID is usually `10de`. A TU102 / RTX 2080 Ti style card commonly has four
-functions:
+Start with `prtconf -dD`. The `-d` option prints PCI vendor/device IDs, and the
+`-D` option prints the attached driver. Look for a group of NVIDIA functions on
+the same PCI package. NVIDIA's vendor ID is usually `10de`. A TU102 / RTX 2080
+Ti style card commonly has four functions:
 
 | Function | Class | What to look for |
 | --- | --- | --- |
@@ -63,6 +79,24 @@ number, for example:
 07:00.3  UCSI / auxiliary
 ```
 
+On illumos/SmartOS, the stable thing to record is usually the physical device
+tree path, not just the short BDF. `prtconf -v` shows the parent bridges and
+the child function nodes. The sibling functions should appear below the same
+PCI bridge path and should differ only by the final function node.
+
+Example shape:
+
+```text
+/pci@0,0/.../pci10de,1e07@0
+/pci@0,0/.../pci10de,10f7@0,1
+/pci@0,0/.../pci10de,1ad6@0,2
+/pci@0,0/.../pci10de,1ad7@0,3
+```
+
+The exact path will differ by motherboard and slot. The important part is that
+all functions are siblings under the same bridge path and have NVIDIA IDs. That
+is how you know they are the same physical card package.
+
 Record the vendor/device IDs for each function. Convert each pair into a
 `ppt_matches` line:
 
@@ -79,6 +113,37 @@ unless they match your hardware.
 If the host has more than one NVIDIA device, prefer matching by the exact
 physical path if you only want one card reserved. `pptadm(8)` supports matches
 by PCI ID or physical path; PCI ID matches reserve every matching device.
+
+## How to Know It Is the Correct Device
+
+Use multiple independent checks before binding a device to `ppt`:
+
+1. Confirm the vendor/device IDs with `prtconf -dD`.
+2. Confirm the functions are siblings in the same physical path with
+   `prtconf -v`.
+3. Confirm the function classes match the expected GPU package layout:
+   display, audio, xHCI, and UCSI/auxiliary.
+4. Confirm the currently attached driver is plausible before binding. The
+   display function should not already be an unrelated storage, network, or
+   chipset driver.
+5. If there are multiple matching GPUs, use physical-path matching or remove
+   ambiguity before binding. A broad `pci10de,...` match binds every device
+   with that ID.
+6. After reboot, confirm `pptadm` shows the same physical paths and IDs that
+   you recorded before binding.
+
+For a single-card passthrough setup, the strongest check is the before/after
+path match:
+
+```text
+before: prtconf -v shows /pci@0,0/.../pci10de,1e07@0
+match:  ppt_matches contains pci10de,1e07 or the exact physical path
+after:  pptadm list -a -o all shows /dev/ppt0 with /pci@0,0/.../pci10de,1e07@0
+```
+
+If the post-binding `pptadm` path does not match the pre-binding `prtconf -v`
+path, stop and fix the binding before starting a guest. Do not guess from
+`ppt0`, `ppt1`, or creation order.
 
 ## After Binding: Map ppt Devices
 
