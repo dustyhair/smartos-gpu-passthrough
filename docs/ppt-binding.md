@@ -43,31 +43,117 @@ vendor ID is usually `10de`.
 
 ## Installing the Binding
 
-For a source build, the default file is:
+There are two ways to provide `ppt_matches`:
 
-```text
-smartos-live/projects/illumos/usr/src/lib/libppt/ppt_matches
-```
+- Build it into the platform image as `/etc/ppt_matches`.
+- Place an override in the boot platform so it appears as
+  `/system/boot/etc/ppt_matches` at runtime.
 
-After editing it, rebuild and install a new SmartOS image.
-
-For a deployed SmartOS image, the file must be present in the platform's `/etc`
-area before the host boots. The installed path inside the running platform is:
-
-```text
-/etc/ppt_matches
-```
-
-At runtime, `libppt` checks the boot platform copy first and then falls back to
-the live `/etc` copy:
+`libppt` intentionally checks the boot platform override first:
 
 ```text
 /system/boot/etc/ppt_matches
 /etc/ppt_matches
 ```
 
-If your workflow stages platform files before reboot, make sure `ppt_matches`
-is copied into the staged platform `etc` directory so it is present at boot.
+That means a file in the boot platform can override the file delivered inside
+the normal platform image.
+
+## Source Build Path
+
+For a source build, the default source file is:
+
+```text
+smartos-live/projects/illumos/usr/src/lib/libppt/ppt_matches
+```
+
+The install rule is in:
+
+```text
+smartos-live/projects/illumos/usr/src/lib/libppt/Makefile
+```
+
+The important pieces are:
+
+```make
+ETCFILES=	ppt_matches
+ROOTETC=	$(ROOT)/etc
+```
+
+During an illumos install, this copies `ppt_matches` into:
+
+```text
+smartos-live/proto/etc/ppt_matches
+```
+
+For SmartOS live image packaging, make sure the file is present in the platform
+manifest:
+
+```text
+f etc/ppt_matches 0444 root root
+```
+
+In this tree that line is present in:
+
+```text
+smartos-live/manifest.d/illumos.manifest
+smartos-live/manifest.gen
+```
+
+After editing the source `ppt_matches`, rebuild illumos and run `gmake live` so
+the new platform image includes it.
+
+## Boot Platform Override
+
+For fast testing, you can also place `ppt_matches` directly into the boot
+platform `etc` directory used by the machine before reboot. On the running
+SmartOS host, that file is seen as:
+
+```text
+/system/boot/etc/ppt_matches
+```
+
+On a SmartOS boot server or staging area this is commonly the `platform/etc`
+directory. Example layout:
+
+```text
+platform/etc/ppt_matches
+platform-<stamp>/etc/ppt_matches
+```
+
+If your environment uses a path such as `/zones/boot`, copy the same file into
+the active platform directories before reboot:
+
+```bash
+mkdir -p /zones/boot/platform/etc
+cp ppt_matches /zones/boot/platform/etc/ppt_matches
+
+mkdir -p /zones/boot/platform-TESTING/etc
+cp ppt_matches /zones/boot/platform-TESTING/etc/ppt_matches
+```
+
+Adjust `platform-TESTING` to whatever platform stamp your test image uses.
+
+This boot-platform copy is useful because it avoids rebuilding the platform just
+to change which PCI IDs bind to `ppt`.
+
+## ppt_aliases
+
+Some older or local workflows also stage an empty or generated
+`ppt_aliases` file alongside `ppt_matches`:
+
+```text
+platform/etc/ppt_aliases
+platform-<stamp>/etc/ppt_aliases
+```
+
+`ppt_matches` is the important file for selecting devices by vendor/device ID.
+Only add `ppt_aliases` if your branch or local tooling expects it. If you do
+add it to a built image, it also needs a manifest entry, for example:
+
+```text
+f etc/ppt_aliases 0444 root root
+```
 
 ## Verifying
 
@@ -76,6 +162,13 @@ After boot, verify that the devices are owned by `ppt`:
 ```bash
 pptadm list -a
 pptadm list -j
+```
+
+Also confirm which file is visible:
+
+```bash
+ls -l /system/boot/etc/ppt_matches /etc/ppt_matches
+cat /system/boot/etc/ppt_matches 2>/dev/null || cat /etc/ppt_matches
 ```
 
 The guest configuration should use the resulting `/dev/pptN` paths. Do not
