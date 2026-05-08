@@ -46,18 +46,17 @@ vendor ID is usually `10de`.
 There are two ways to provide `ppt_matches`:
 
 - Build it into the platform image as `/etc/ppt_matches`.
-- Place an override in the boot platform so it appears as
-  `/system/boot/etc/ppt_matches` at runtime.
+- Load it as a boot file module from `/boot/etc/ppt_matches`.
 
-`libppt` intentionally checks the boot platform override first:
+`libppt` intentionally checks the boot-module provided file first:
 
 ```text
 /system/boot/etc/ppt_matches
 /etc/ppt_matches
 ```
 
-That means a file in the boot platform can override the file delivered inside
-the normal platform image.
+That means a loader-provided file can override the file delivered inside the
+normal platform image.
 
 ## Source Build Path
 
@@ -103,53 +102,65 @@ smartos-live/manifest.gen
 After editing the source `ppt_matches`, rebuild illumos and run `gmake live` so
 the new platform image includes it.
 
-## Boot Platform Override
+## Loader Boot Module Override
 
-For fast testing, you can also place `ppt_matches` directly into the boot
-platform `etc` directory used by the machine before reboot. On the running
-SmartOS host, that file is seen as:
+For the tested setup, `ppt_matches` and `ppt_aliases` are loaded by the boot
+loader as file modules. This is the practical way to change passthrough binding
+without rebuilding the whole platform image.
+
+Place the files in the boot tree:
+
+```text
+/boot/etc/ppt_matches
+/boot/etc/ppt_aliases
+```
+
+Then add these lines to `loader.conf`:
+
+```text
+ppt_aliases_load="YES"
+ppt_aliases_type="file"
+ppt_aliases_name="/boot/etc/ppt_aliases"
+ppt_aliases_flags="name=/etc/ppt_aliases"
+ppt_matches_load="YES"
+ppt_matches_type="file"
+ppt_matches_name="/boot/etc/ppt_matches"
+ppt_matches_flags="name=/etc/ppt_matches"
+```
+
+The `_name` value is where the loader reads the file from. The `_flags`
+`name=/etc/...` value is the boot module name illumos uses. At runtime, that
+boot module is visible through `/system/boot`, so `libppt` sees:
 
 ```text
 /system/boot/etc/ppt_matches
+/system/boot/etc/ppt_aliases
 ```
 
-On a SmartOS boot server or staging area this is commonly the `platform/etc`
-directory. Example layout:
-
-```text
-platform/etc/ppt_matches
-platform-<stamp>/etc/ppt_matches
-```
-
-If your environment uses a path such as `/zones/boot`, copy the same file into
-the active platform directories before reboot:
+If your SmartOS boot tree is staged somewhere else, put the same files under
+that boot tree's `boot/etc` directory. For example, in a staging area:
 
 ```bash
-mkdir -p /zones/boot/platform/etc
-cp ppt_matches /zones/boot/platform/etc/ppt_matches
-
-mkdir -p /zones/boot/platform-TESTING/etc
-cp ppt_matches /zones/boot/platform-TESTING/etc/ppt_matches
+mkdir -p /path/to/boot-tree/boot/etc
+cp ppt_matches /path/to/boot-tree/boot/etc/ppt_matches
+cp ppt_aliases /path/to/boot-tree/boot/etc/ppt_aliases
 ```
 
-Adjust `platform-TESTING` to whatever platform stamp your test image uses.
-
-This boot-platform copy is useful because it avoids rebuilding the platform just
-to change which PCI IDs bind to `ppt`.
+Also make sure the `loader.conf` used by that boot tree contains the file-module
+entries above.
 
 ## ppt_aliases
 
-Some older or local workflows also stage an empty or generated
-`ppt_aliases` file alongside `ppt_matches`:
+The tested loader setup loads `ppt_aliases` alongside `ppt_matches`:
 
 ```text
-platform/etc/ppt_aliases
-platform-<stamp>/etc/ppt_aliases
+/boot/etc/ppt_aliases
 ```
 
-`ppt_matches` is the important file for selecting devices by vendor/device ID.
-Only add `ppt_aliases` if your branch or local tooling expects it. If you do
-add it to a built image, it also needs a manifest entry, for example:
+`ppt_matches` is the file that selects devices by vendor/device ID. `ppt_aliases`
+is used for driver alias style bindings when present. If you add `ppt_aliases`
+to a built platform image rather than loading it from the boot tree, it also
+needs a manifest entry, for example:
 
 ```text
 f etc/ppt_aliases 0444 root root
@@ -168,6 +179,7 @@ Also confirm which file is visible:
 
 ```bash
 ls -l /system/boot/etc/ppt_matches /etc/ppt_matches
+ls -l /system/boot/etc/ppt_aliases /etc/ppt_aliases
 cat /system/boot/etc/ppt_matches 2>/dev/null || cat /etc/ppt_matches
 ```
 
