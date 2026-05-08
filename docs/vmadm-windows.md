@@ -3,6 +3,9 @@
 This is an example shape for a Windows 11 passthrough VM. UUIDs, disk names,
 device names, and ROM paths should be adjusted for the local machine.
 
+See [vmadm support](vmadm-support.md) for the property list and a larger create
+payload.
+
 ## VM Identity
 
 - Alias: `win11vm`

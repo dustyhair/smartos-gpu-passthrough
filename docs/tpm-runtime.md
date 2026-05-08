@@ -20,7 +20,7 @@ environment. The local branches add:
 - ioctl/header portability changes
 - `MIN()` fallback where needed
 - avoidance of Linux/GNU-specific assumptions that do not hold on SmartOS
-- build notes under `docs/smartos-build.md`
+- SmartOS build notes in the corresponding source branches
 
 ## Runtime Shape
 

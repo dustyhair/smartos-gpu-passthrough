@@ -83,3 +83,20 @@ git -C swtpm checkout smartos-build-support-20260507
 
 See [TPM runtime](tpm-runtime.md) for details.
 
+## Bind a GPU to ppt
+
+Before creating a passthrough VM, configure `ppt_matches` so the host reserves
+the GPU functions for bhyve instead of attaching normal host drivers.
+
+See [ppt binding](ppt-binding.md).
+
+## Create a VM
+
+Start with the `vmadm` path:
+
+- [vmadm support](vmadm-support.md)
+- [Windows vmadm example](vmadm-windows.md)
+
+Use the manual bhyve path only when you need a smaller A/B test:
+
+- [manual bhyve launch](manual-bhyve.md)

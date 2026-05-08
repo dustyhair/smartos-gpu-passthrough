@@ -28,9 +28,12 @@ the history from chat logs.
 1. Read the [branch matrix](docs/branches.md).
 2. Follow the [setup guide](docs/setup.md).
 3. Build with the [build notes](docs/build.md).
-4. Create a test VM using [vmadm Windows notes](docs/vmadm-windows.md).
-5. Use [known-good settings](docs/known-good.md) as the first target.
-6. Review [open issues](docs/open-issues.md) before changing reset, topology, or
+4. Bind the GPU to `ppt` using [ppt binding notes](docs/ppt-binding.md).
+5. Review the [vmadm support](docs/vmadm-support.md) added by the branch.
+6. Create a test VM using [vmadm Windows notes](docs/vmadm-windows.md).
+7. Compare with [manual bhyve launch notes](docs/manual-bhyve.md) if needed.
+8. Use [known-good settings](docs/known-good.md) as the first target.
+9. Review [open issues](docs/open-issues.md) before changing reset, topology, or
    interrupt-remapping behavior.
 
 ## Repository Layout
@@ -38,8 +41,10 @@ the history from chat logs.
 - `docs/branches.md`: branch and commit map.
 - `docs/setup.md`: how to clone the trees and select branches.
 - `docs/build.md`: SmartOS/illumos build notes.
+- `docs/ppt-binding.md`: how `ppt_matches` selects host devices for passthrough.
+- `docs/vmadm-support.md`: vmadm properties added by this branch.
 - `docs/vmadm-windows.md`: example VM configuration for Windows passthrough.
+- `docs/manual-bhyve.md`: equivalent direct bhyve launch shape.
 - `docs/tpm-runtime.md`: `swtpm` and `libtpms` notes.
 - `docs/known-good.md`: baseline settings known to boot.
 - `docs/open-issues.md`: known limitations and areas still under test.
-
